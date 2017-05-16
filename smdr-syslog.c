@@ -89,9 +89,8 @@ void init(){
 // -------------------------------------------------
 /* stuff, который будет делать клиент */
 void func(node *tmp){
-    int i, k, j;
-    char out[MAX_BUF]; memset (out, 0, sizeof(out));
-    char* lexem[64];
+    int j;
+    memset (buf, 0, sizeof(buf));
 
     j = recv(tmp->fd, &buf,sizeof buf, 0); // получаем строку от сервера
     if(j <= 0){
@@ -102,12 +101,12 @@ void func(node *tmp){
 	return;
 	}
     if(strlen(buf) > 2 ) {
-//	i = strok2(buf, lexem); // разбили полученную строку на лексемы
-//	for (k = 0; k < i; k++)	printf("%s ", lexem[k]); 
-//	printf("\n");
+	buf[j]='\0';
+	buf[j-1]='\0';
+	printf ("%s", buf);
+	buf[strlen(buf) - 1] = 0;
 	syslog( log_level, "%s", buf );
     }
-//    write(tmp->fd, out, strlen(out) + 1); //отдаем строку серверу
 }
 
 

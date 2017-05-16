@@ -21,7 +21,7 @@
 #include "list.h"
 
 #define MAX_EVENTS 1000
-#define MAX_BUF    10240
+#define MAX_BUF    256
 #define SERVER_PORT 5100
 #define SERVER_HOST "192.168.7.11"
 
