@@ -5,6 +5,7 @@ int epollfd; //я есть епул
 struct list_head head; //список клиентов (да и сервер там же)
 
 char buf [MAX_BUF];
+char out [MAX_BUF];
 
 int log_level = LOG_INFO;
 int log_facility = LOG_USER;
@@ -32,36 +33,12 @@ int add (node* client){
     ev.events = EPOLLIN;
     ev.data.ptr = client;
     fd = client->fd;
-    //printf("client fd=%d\n",fd);
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) err(EXIT_FAILURE,"epoll_ctl: listen_sock");
     list_add(&client->list, &head);
     return 0;
 }
 
-// -------------------------------------------------
-/* строку в строчные */
-void to_l(char** buf, int len, char* out){
-}
-
-// -------------------------------------------------
-/* разбиение строки на лексемы */
-int strok2(char *str, char **lexem){
-    int i = 0;
-    char * sp;
-    sp=str;
-    while(*sp!=0x0){
-        while(*sp!=0x0 && *sp==0x20 ) sp++;
-        lexem[i++]=sp;
-        while(*sp!=0x0 && *sp!=0x20 ) sp++;
-        if(*sp==0x0) break;
-        *sp=0x0;
-        sp++;
-    }
-    return i;
-}
-
 void func(node*);
-
 
 // -------------------------------------------------
 /* инициализируем клиента */
@@ -86,6 +63,14 @@ void init(){
     add(server);
 }
 
+void clear_string(char* string){
+    int i = 0;
+    while (string[i] != 0){
+	if (string[i] <= 31) string[i] = 32;
+	i++;
+    }
+}
+
 // -------------------------------------------------
 /* stuff, который будет делать клиент */
 void func(node *tmp){
@@ -95,17 +80,19 @@ void func(node *tmp){
     j = recv(tmp->fd, &buf,sizeof buf, 0); // получаем строку от сервера
     if(j <= 0){
 	del(tmp);
-	printf("sleep\n");
+//	printf("sleep\n");
 	sleep(rand()%5+1);
 	init();
 	return;
 	}
     if(strlen(buf) > 2 ) {
-	buf[j]='\0';
-	buf[j-1]='\0';
-	printf ("%s", buf);
-	buf[strlen(buf) - 1] = 0;
-	syslog( log_level, "%s", buf );
+	clear_string(buf);
+	strcat(out, buf);
+	if (strlen(out) > 120) {
+	    syslog( LOG_INFO, "%s", out );
+//	    printf ("%s", out);
+	    memset (out, 0, sizeof(out));
+	}
     }
 }
 
@@ -113,6 +100,9 @@ void func(node *tmp){
 
 // -------------------------------------------------
 int main() {
+    if( fork() != 0 ) exit(0); 
+    setsid(); 
+    
     struct epoll_event events[MAX_EVENTS];
     int i,nfds;
 
@@ -124,8 +114,8 @@ int main() {
 
     init();
 
-    openlog( "[smdr-syslog]", 0, log_facility);
-    syslog( log_level, "%s", "smdr-syslog starting" );
+    openlog( "[smdr-syslog]", 0, LOG_USER);
+    syslog( LOG_INFO, "%s", "smdr-syslog starting" );
     
     /* бежим по событиям епула и вызываем соответсвующую функцию (для клиента - клиентскую, для сервера - серверную) */
     for (;;) {
